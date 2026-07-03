@@ -121,6 +121,20 @@ export function ImportInvoice() {
     <div>
       <h2 style={{ marginTop: 0 }}>Importar Fatura</h2>
 
+      <div className="steps">
+        <span className={`step ${!preview ? 'active' : ''}`}>
+          <span className="num">1</span> Enviar arquivo
+        </span>
+        <span className="sep">→</span>
+        <span className={`step ${preview ? 'active' : ''}`}>
+          <span className="num">2</span> Revisar itens
+        </span>
+        <span className="sep">→</span>
+        <span className="step">
+          <span className="num">3</span> Confirmar
+        </span>
+      </div>
+
       {!preview && (
         <form className="card" onSubmit={handleAnalisar}>
           <div className="form-grid">

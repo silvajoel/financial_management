@@ -149,3 +149,107 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* chips de lançamento rápido (contas fixas do mês) */
+.chip-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* resumo da divisão de fatura */
+.split-summary {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+}
+
+/* formulário colapsável */
+details.collapsible > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.9rem 1.25rem;
+  list-style: none;
+  user-select: none;
+}
+
+details.collapsible > summary::before {
+  content: '+ ';
+  color: var(--primary);
+}
+
+details.collapsible[open] > summary::before {
+  content: '− ';
+}
+
+details.collapsible {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+}
+
+details.collapsible > .collapsible-body {
+  padding: 0 1.25rem 1.25rem;
+}
+
+/* passos do fluxo de importação */
+.steps {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.steps .step {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.steps .step .num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+}
+
+.steps .step.active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.steps .step.active .num {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.steps .sep {
+  color: var(--text-muted);
+  align-self: center;
+}

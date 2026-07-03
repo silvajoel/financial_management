@@ -72,6 +72,7 @@ export interface CardInvoiceItem {
   valor: number;
   categoryId: number | null;
   portador: string | null;
+  responsavel: string | null;
   parcelaAtual: number | null;
   parcelaTotal: number | null;
 }

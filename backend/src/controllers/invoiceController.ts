@@ -15,6 +15,15 @@ function extensao(nomeArquivo: string): string {
   return partes.length > 1 ? partes[partes.length - 1].toLowerCase() : '';
 }
 
+// "JOEL SILVA CAMPOS C" -> "Joel": o primeiro nome do portador é o default
+// de responsável na divisão da fatura.
+function primeiroNome(portador: string | null): string | null {
+  if (!portador) return null;
+  const primeiro = portador.trim().split(/\s+/)[0];
+  if (!primeiro) return null;
+  return primeiro.charAt(0).toUpperCase() + primeiro.slice(1).toLowerCase();
+}
+
 export async function preview(req: UploadedFileRequest, res: Response) {
   const { accountId } = req.body;
   if (!accountId) return res.status(400).json({ error: 'accountId é obrigatório' });
@@ -137,6 +146,7 @@ export async function confirm(req: AuthenticatedRequest, res: Response) {
       valor: item.valor,
       categoryId: item.categoryId ?? null,
       portador: item.portador ?? null,
+      responsavel: item.responsavel ?? primeiroNome(item.portador ?? null),
       parcelaAtual: item.parcelaAtual ?? null,
       parcelaTotal: item.parcelaTotal ?? null,
     })),
@@ -145,6 +155,20 @@ export async function confirm(req: AuthenticatedRequest, res: Response) {
   const itensCriados = await CardInvoiceItem.findAll({ where: { cardInvoiceId: cardInvoice.id } });
 
   res.status(201).json({ cardInvoice, transaction, itens: itensCriados });
+}
+
+export async function updateItem(req: AuthenticatedRequest, res: Response) {
+  const item = await CardInvoiceItem.findByPk(req.params.id);
+  if (!item) return res.status(404).json({ error: 'Item não encontrado' });
+
+  const { responsavel, categoryId, descricao, valor } = req.body;
+  await item.update({
+    responsavel: responsavel === undefined ? item.responsavel : responsavel,
+    categoryId: categoryId === undefined ? item.categoryId : categoryId,
+    descricao: descricao === undefined ? item.descricao : descricao,
+    valor: valor === undefined ? item.valor : valor,
+  });
+  res.json(item);
 }
 
 export async function list(req: AuthenticatedRequest, res: Response) {

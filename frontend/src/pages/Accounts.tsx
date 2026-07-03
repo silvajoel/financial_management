@@ -82,7 +82,7 @@ function NovaContaForm() {
   const mutation = useMutation({
     mutationFn: async () =>
       api.post('/accounts', {
-        nome: form.nome,
+        nome: form.nome || `${form.instituicao} - ${NOMES_TIPO[form.tipo]}`,
         instituicao: form.instituicao,
         tipo: form.tipo,
         saldo: form.saldo === '' ? 0 : Number(form.saldo),
@@ -98,14 +98,19 @@ function NovaContaForm() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!form.nome || !form.instituicao) return;
+    if (!form.instituicao) return;
     mutation.mutate();
   }
 
   return (
-    <form className="card chart-section" onSubmit={handleSubmit}>
-      <h3>Nova conta</h3>
-      <div className="form-grid">
+    <details className="collapsible">
+      <summary>Nova conta ou cartão</summary>
+      <form className="collapsible-body" onSubmit={handleSubmit}>
+        <p className="text-muted" style={{ fontSize: '0.85rem', marginTop: 0 }}>
+          Serve para banco, cartão de crédito ou algo genérico como "Boleto" e "Dinheiro". Contas de água/luz não
+          entram aqui — elas são lançamentos mensais, na tela Lançamentos.
+        </p>
+        <div className="form-grid">
         <div className="form-field">
           <label>Instituição</label>
           <input
@@ -122,12 +127,11 @@ function NovaContaForm() {
           </datalist>
         </div>
         <div className="form-field">
-          <label>Nome da conta</label>
+          <label>Apelido (opcional)</label>
           <input
             value={form.nome}
             onChange={(e) => setForm({ ...form, nome: e.target.value })}
-            placeholder="Ex.: Caixa - Crédito"
-            required
+            placeholder="Se vazio, gera automático"
           />
         </div>
         <div className="form-field">
@@ -181,10 +185,11 @@ function NovaContaForm() {
           </>
         )}
       </div>
-      <button className="btn" type="submit" style={{ marginTop: '0.75rem' }} disabled={mutation.isPending}>
-        Adicionar conta
-      </button>
-    </form>
+        <button className="btn" type="submit" style={{ marginTop: '0.75rem' }} disabled={mutation.isPending}>
+          Adicionar conta
+        </button>
+      </form>
+    </details>
   );
 }
 

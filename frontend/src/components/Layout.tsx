@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', end: true },
-  { to: '/contas', label: 'Contas' },
+  { to: '/contas', label: 'Bancos & Cartões' },
   { to: '/lancamentos', label: 'Lançamentos' },
   { to: '/faturas', label: 'Faturas de Cartão' },
   { to: '/importar-fatura', label: 'Importar Fatura' },

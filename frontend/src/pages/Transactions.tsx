@@ -21,6 +21,9 @@ function novoLancamentoInicial(mes: number, ano: number) {
     competenciaAno: ano,
     dataVencimento: '',
     status: 'em_aberto' as StatusTransacao,
+    recorrente: false,
+    parcelaAtual: '',
+    parcelaTotal: '',
   };
 }
 
@@ -53,9 +56,13 @@ function TransferForm({ accounts, onDone }: { accounts: Account[] | undefined; o
   }
 
   return (
-    <form className="card chart-section" onSubmit={handleSubmit}>
-      <h3>Transferir entre contas</h3>
-      <div className="form-grid">
+    <details className="collapsible">
+      <summary>Transferir entre contas</summary>
+      <form className="collapsible-body" onSubmit={handleSubmit}>
+        <p className="text-muted" style={{ fontSize: '0.85rem', marginTop: 0 }}>
+          Movimenta dinheiro entre suas contas sem contar como receita nem despesa.
+        </p>
+        <div className="form-grid">
         <div className="form-field">
           <label>De</label>
           <select value={form.contaOrigemId} onChange={(e) => setForm({ ...form, contaOrigemId: e.target.value })} required>
@@ -97,11 +104,12 @@ function TransferForm({ accounts, onDone }: { accounts: Account[] | undefined; o
           <input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
         </div>
       </div>
-      <button className="btn" type="submit" style={{ marginTop: '0.75rem' }} disabled={mutation.isPending}>
-        Transferir
-      </button>
-      {mutation.isError && <p className="text-danger">Não foi possível transferir. Confira as contas selecionadas.</p>}
-    </form>
+        <button className="btn" type="submit" style={{ marginTop: '0.75rem' }} disabled={mutation.isPending}>
+          Transferir
+        </button>
+        {mutation.isError && <p className="text-danger">Não foi possível transferir. Confira as contas selecionadas.</p>}
+      </form>
+    </details>
   );
 }
 
@@ -135,6 +143,8 @@ export function Transactions() {
         categoryId: Number(form.categoryId),
         valorTotal: Number(form.valorTotal),
         dataVencimento: form.dataVencimento || null,
+        parcelaAtual: form.parcelaAtual === '' ? null : Number(form.parcelaAtual),
+        parcelaTotal: form.parcelaTotal === '' ? null : Number(form.parcelaTotal),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions', mes, ano] });
@@ -154,6 +164,14 @@ export function Transactions() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => api.post(`/transactions/${id}/delete`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions', mes, ano] });
+      queryClient.invalidateQueries({ queryKey: ['summary'] });
+    },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async () => (await api.post('/transactions/generate-month', { mes, ano })).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions', mes, ano] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
@@ -184,10 +202,49 @@ export function Transactions() {
           onChange={(e) => setAno(Number(e.target.value))}
           style={{ width: 90 }}
         />
+        <button
+          className="btn btn-secondary"
+          onClick={() => generateMutation.mutate()}
+          disabled={generateMutation.isPending}
+          title="Copia do mês anterior as contas recorrentes (água, luz, salário...) e avança as parcelas em andamento"
+        >
+          {generateMutation.isPending ? 'Gerando...' : '⟳ Gerar contas do mês'}
+        </button>
+        {generateMutation.isSuccess && (
+          <span className="text-success" style={{ alignSelf: 'center', fontSize: '0.85rem' }}>
+            {(generateMutation.data as { criadas: number }).criadas} lançamento(s) criado(s)
+          </span>
+        )}
       </div>
 
       <form className="card chart-section" onSubmit={handleSubmit}>
         <h3>Novo lançamento</h3>
+        <p className="text-muted" style={{ fontSize: '0.85rem', margin: '0 0 0.5rem' }}>
+          Contas do mês — clique para preencher:
+        </p>
+        <div className="chip-row">
+          {categories
+            ?.filter((c) => ['Aluguel', 'Conta de Luz', 'Água', 'Telefone', 'Hosting', 'Saúde'].includes(c.nome))
+            .map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className="chip"
+                onClick={() => {
+                  const contaBoleto = accounts?.find((a) => a.instituicao.toLowerCase().includes('boleto'));
+                  setForm({
+                    ...form,
+                    categoryId: String(c.id),
+                    descricao: c.nome,
+                    accountId: form.accountId || String(contaBoleto?.id ?? accounts?.[0]?.id ?? ''),
+                    status: 'em_aberto',
+                  });
+                }}
+              >
+                {c.nome}
+              </button>
+            ))}
+        </div>
         <div className="form-grid">
           <div className="form-field">
             <label>Conta</label>
@@ -243,6 +300,35 @@ export function Transactions() {
               ))}
             </select>
           </div>
+          <div className="form-field">
+            <label>Parcela (se parcelado)</label>
+            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+              <input
+                value={form.parcelaAtual}
+                onChange={(e) => setForm({ ...form, parcelaAtual: e.target.value.replace(/\D/g, '') })}
+                placeholder="1"
+                style={{ width: 55 }}
+              />
+              <span className="text-muted">/</span>
+              <input
+                value={form.parcelaTotal}
+                onChange={(e) => setForm({ ...form, parcelaTotal: e.target.value.replace(/\D/g, '') })}
+                placeholder="36"
+                style={{ width: 55 }}
+              />
+            </div>
+          </div>
+          <div className="form-field">
+            <label>Recorrente todo mês?</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400 }}>
+              <input
+                type="checkbox"
+                checked={form.recorrente}
+                onChange={(e) => setForm({ ...form, recorrente: e.target.checked })}
+              />
+              Sim (água, luz, salário, assinatura...)
+            </label>
+          </div>
         </div>
         <button className="btn" type="submit" style={{ marginTop: '0.75rem' }} disabled={createMutation.isPending}>
           Adicionar
@@ -275,7 +361,19 @@ export function Transactions() {
             <tbody>
               {transactions?.map((t) => (
                 <tr key={t.id}>
-                  <td>{t.descricao}</td>
+                  <td>
+                    {t.descricao}
+                    {t.parcelaAtual && t.parcelaTotal && (
+                      <span className="text-muted" style={{ marginLeft: 6, fontSize: '0.8rem' }}>
+                        ({t.parcelaAtual}/{t.parcelaTotal})
+                      </span>
+                    )}
+                    {t.recorrente && (
+                      <span className="text-muted" style={{ marginLeft: 6, fontSize: '0.8rem' }} title="Recorrente">
+                        ⟳
+                      </span>
+                    )}
+                  </td>
                   <td>{t.Account?.nome}</td>
                   <td>{t.Category?.nome}</td>
                   <td>{formatBRL(t.valorTotal)}</td>

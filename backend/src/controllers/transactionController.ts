@@ -170,6 +170,54 @@ export async function transfer(req: AuthenticatedRequest, res: Response) {
   res.status(201).json(resultado);
 }
 
+export async function generateMonth(req: AuthenticatedRequest, res: Response) {
+  const mes = Number(req.body.mes);
+  const ano = Number(req.body.ano);
+  if (!mes || !ano) return res.status(400).json({ error: 'Informe mes e ano' });
+
+  const mesAnterior = mes === 1 ? 12 : mes - 1;
+  const anoAnterior = mes === 1 ? ano - 1 : ano;
+
+  const [anteriores, existentes] = await Promise.all([
+    Transaction.findAll({ where: { competenciaMes: mesAnterior, competenciaAno: anoAnterior } }),
+    Transaction.findAll({ where: { competenciaMes: mes, competenciaAno: ano }, attributes: ['descricao'] }),
+  ]);
+
+  const descricoesExistentes = new Set(existentes.map((t) => t.descricao));
+  const criadas: Transaction[] = [];
+
+  for (const t of anteriores) {
+    const parcelaEmAndamento = t.parcelaTotal !== null && t.parcelaAtual !== null && t.parcelaAtual < t.parcelaTotal;
+    if (!t.recorrente && !parcelaEmAndamento) continue;
+    if (descricoesExistentes.has(t.descricao)) continue;
+
+    let dataVencimento: string | null = null;
+    if (t.dataVencimento) {
+      const dia = t.dataVencimento.slice(8, 10);
+      dataVencimento = `${ano}-${String(mes).padStart(2, '0')}-${dia}`;
+    }
+
+    const nova = await Transaction.create({
+      accountId: t.accountId,
+      categoryId: t.categoryId,
+      descricao: t.descricao,
+      valorTotal: t.valorTotal,
+      valorPago: 0,
+      status: 'em_aberto',
+      competenciaMes: mes,
+      competenciaAno: ano,
+      dataVencimento,
+      parcelaAtual: parcelaEmAndamento ? (t.parcelaAtual as number) + 1 : null,
+      parcelaTotal: t.parcelaTotal,
+      recorrente: t.recorrente,
+      observacao: t.observacao,
+    });
+    criadas.push(nova);
+  }
+
+  res.status(201).json({ criadas: criadas.length, lancamentos: criadas });
+}
+
 export async function summary(req: AuthenticatedRequest, res: Response) {
   const mes = Number(req.query.mes);
   const ano = Number(req.query.ano);
