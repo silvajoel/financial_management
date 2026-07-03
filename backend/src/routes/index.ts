@@ -4,6 +4,7 @@ import accountRoutes from './accountRoutes';
 import categoryRoutes from './categoryRoutes';
 import transactionRoutes from './transactionRoutes';
 import goalRoutes from './goalRoutes';
+import invoiceRoutes from './invoiceRoutes';
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
@@ -13,5 +14,6 @@ router.use('/accounts', authMiddleware, accountRoutes);
 router.use('/categories', authMiddleware, categoryRoutes);
 router.use('/transactions', authMiddleware, transactionRoutes);
 router.use('/goals', authMiddleware, goalRoutes);
+router.use('/invoices', authMiddleware, invoiceRoutes);
 
 export default router;
