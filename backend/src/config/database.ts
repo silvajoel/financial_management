@@ -6,5 +6,6 @@ export const sequelize = new Sequelize(env.database, env.username, env.password,
   host: env.host,
   port: env.port,
   dialect: 'mysql',
+  dialectOptions: env.dialectOptions,
   logging: false,
 });
