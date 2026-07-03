@@ -9,12 +9,13 @@ export interface AccountAttributes {
   instituicao: Instituicao;
   tipo: TipoConta;
   limite: number | null;
+  saldo: number;
   ativa: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-type AccountCreationAttributes = Optional<AccountAttributes, 'id' | 'limite' | 'ativa'>;
+type AccountCreationAttributes = Optional<AccountAttributes, 'id' | 'limite' | 'saldo' | 'ativa'>;
 
 export class Account extends Model<AccountAttributes, AccountCreationAttributes> implements AccountAttributes {
   public id!: number;
@@ -22,6 +23,7 @@ export class Account extends Model<AccountAttributes, AccountCreationAttributes>
   public instituicao!: Instituicao;
   public tipo!: TipoConta;
   public limite!: number | null;
+  public saldo!: number;
   public ativa!: boolean;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -41,6 +43,7 @@ export function initAccount(sequelize: Sequelize) {
         allowNull: false,
       },
       limite: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+      saldo: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
       ativa: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     },
     { sequelize, tableName: 'accounts', underscored: true },
