@@ -26,7 +26,7 @@ function EditableAccountRow({ account }: { account: Account }) {
 
   const mutation = useMutation({
     mutationFn: async () =>
-      api.put(`/accounts/${account.id}`, {
+      api.post(`/accounts/${account.id}/update`, {
         saldo: Number(saldo),
         limite: limite === '' ? null : Number(limite),
       }),

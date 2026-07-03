@@ -5,7 +5,9 @@ const router = Router();
 
 router.get('/', categoryController.list);
 router.post('/', categoryController.create);
-router.put('/:id', categoryController.update);
-router.delete('/:id', categoryController.remove);
+// POST em vez de PUT/DELETE: o proxy do Plesk só libera GET/POST/OPTIONS no
+// preflight CORS, bloqueando PUT/DELETE no navegador.
+router.post('/:id/update', categoryController.update);
+router.post('/:id/delete', categoryController.remove);
 
 export default router;

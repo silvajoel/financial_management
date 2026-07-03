@@ -6,7 +6,10 @@ const router = Router();
 router.get('/summary', transactionController.summary);
 router.get('/', transactionController.list);
 router.post('/', transactionController.create);
-router.put('/:id', transactionController.update);
-router.delete('/:id', transactionController.remove);
+// POST em vez de PUT/DELETE: o proxy do Plesk (Apache/Passenger) responde o
+// preflight CORS (OPTIONS) sozinho e só libera GET/POST/OPTIONS, bloqueando
+// PUT/DELETE no navegador antes de chegar no Node.
+router.post('/:id/update', transactionController.update);
+router.post('/:id/delete', transactionController.remove);
 
 export default router;

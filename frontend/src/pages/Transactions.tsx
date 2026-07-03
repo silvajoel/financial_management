@@ -64,7 +64,7 @@ export function Transactions() {
 
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: StatusTransacao }) =>
-      api.put(`/transactions/${id}`, { status }),
+      api.post(`/transactions/${id}/update`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions', mes, ano] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
@@ -72,7 +72,7 @@ export function Transactions() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => api.delete(`/transactions/${id}`),
+    mutationFn: async (id: number) => api.post(`/transactions/${id}/delete`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions', mes, ano] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
