@@ -69,8 +69,10 @@ function EditableAccountRow({ account }: { account: Account }) {
   );
 }
 
+const BANDEIRAS = ['Visa', 'Mastercard', 'Elo', 'Amex'];
+
 function novaContaInicial() {
-  return { nome: '', instituicao: '', tipo: 'debito' as TipoConta, saldo: '', limite: '' };
+  return { nome: '', instituicao: '', tipo: 'debito' as TipoConta, saldo: '', limite: '', bandeira: '', ultimosDigitos: '' };
 }
 
 function NovaContaForm() {
@@ -85,6 +87,8 @@ function NovaContaForm() {
         tipo: form.tipo,
         saldo: form.saldo === '' ? 0 : Number(form.saldo),
         limite: form.limite === '' ? null : Number(form.limite),
+        bandeira: form.bandeira || null,
+        ultimosDigitos: form.ultimosDigitos || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
@@ -141,14 +145,40 @@ function NovaContaForm() {
           <input value={form.saldo} onChange={(e) => setForm({ ...form, saldo: e.target.value })} placeholder="0,00" />
         </div>
         {form.tipo === 'credito' && (
-          <div className="form-field">
-            <label>Limite disponível</label>
-            <input
-              value={form.limite}
-              onChange={(e) => setForm({ ...form, limite: e.target.value })}
-              placeholder="Ex.: 10000"
-            />
-          </div>
+          <>
+            <div className="form-field">
+              <label>Limite disponível</label>
+              <input
+                value={form.limite}
+                onChange={(e) => setForm({ ...form, limite: e.target.value })}
+                placeholder="Ex.: 10000"
+              />
+            </div>
+            <div className="form-field">
+              <label>Bandeira</label>
+              <input
+                list="bandeiras-conhecidas"
+                value={form.bandeira}
+                onChange={(e) => setForm({ ...form, bandeira: e.target.value })}
+                placeholder="Ex.: Visa, Mastercard, Elo..."
+              />
+              <datalist id="bandeiras-conhecidas">
+                {BANDEIRAS.map((b) => (
+                  <option key={b} value={b} />
+                ))}
+              </datalist>
+            </div>
+            <div className="form-field">
+              <label>Últimos 4 dígitos</label>
+              <input
+                value={form.ultimosDigitos}
+                onChange={(e) => setForm({ ...form, ultimosDigitos: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                placeholder="0000"
+                maxLength={4}
+                style={{ width: 80 }}
+              />
+            </div>
+          </>
         )}
       </div>
       <button className="btn" type="submit" style={{ marginTop: '0.75rem' }} disabled={mutation.isPending}>

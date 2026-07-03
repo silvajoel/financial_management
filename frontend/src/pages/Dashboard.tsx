@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { Goal, Transaction, TransactionSummary } from '../api/types';
+import type { Account, Goal, Transaction, TransactionSummary } from '../api/types';
 import { StatTile } from '../components/StatTile';
 import { Meter } from '../components/Meter';
+import { CreditCardVisual } from '../components/CreditCardVisual';
 import { CategoryBarChart } from '../components/charts/CategoryBarChart';
 import { SaldoTrendChart } from '../components/charts/SaldoTrendChart';
 import { formatBRL, NOMES_MES } from '../utils/format';
@@ -51,6 +52,12 @@ export function Dashboard() {
     queryFn: async () => (await api.get<Transaction[]>('/transactions', { params: { mes, ano } })).data,
   });
 
+  const { data: accounts } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: async () => (await api.get<Account[]>('/accounts')).data,
+  });
+
+  const cartoes = (accounts ?? []).filter((a) => a.tipo === 'credito');
   const parcelasAtivas = (transacoesMes ?? []).filter((t) => t.parcelaTotal && t.parcelaAtual);
 
   if (carregandoSummary) return <p className="text-muted">Carregando...</p>;
@@ -72,6 +79,17 @@ export function Dashboard() {
           tone={(summary?.saldo ?? 0) >= 0 ? 'good' : 'bad'}
         />
       </div>
+
+      {cartoes.length > 0 && (
+        <div className="chart-section">
+          <h3>Cartões de crédito</h3>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            {cartoes.map((c) => (
+              <CreditCardVisual key={c.id} account={c} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="dashboard-grid">
         <div>

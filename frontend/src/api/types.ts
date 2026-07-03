@@ -10,6 +10,8 @@ export interface Account {
   tipo: TipoConta;
   limite: number | null;
   saldo: number;
+  bandeira: string | null;
+  ultimosDigitos: string | null;
   ativa: boolean;
 }
 
