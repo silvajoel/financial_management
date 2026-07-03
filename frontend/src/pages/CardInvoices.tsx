@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { CardInvoice, CardInvoiceItem } from '../api/types';
+import type { Account, CardInvoice, CardInvoiceItem, Category } from '../api/types';
 import { formatBRL, NOMES_MES } from '../utils/format';
 
 const COMPARTILHADO = 'Compartilhado';
@@ -107,6 +107,34 @@ function InvoiceSplit({ invoice }: { invoice: CardInvoice }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoices'] }),
   });
 
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => (await api.get<Category[]>('/categories')).data,
+  });
+
+  const { data: accounts } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: async () => (await api.get<Account[]>('/accounts')).data,
+  });
+
+  const cobrarMutation = useMutation({
+    mutationFn: async (pessoa: string) => {
+      const categoria = categories?.find((c) => c.nome === 'Outras Receitas');
+      const conta = accounts?.find((a) => a.tipo === 'debito');
+      if (!categoria || !conta) throw new Error('Categoria/conta padrão não encontrada');
+      return api.post('/transactions', {
+        accountId: conta.id,
+        categoryId: categoria.id,
+        descricao: `Parte de ${pessoa} - Fatura ${String(invoice.competenciaMes).padStart(2, '0')}/${invoice.competenciaAno}`,
+        valorTotal: Number(divisao.totalPorPessoa[pessoa].toFixed(2)),
+        status: 'em_aberto',
+        competenciaMes: invoice.competenciaMes,
+        competenciaAno: invoice.competenciaAno,
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+  });
+
   async function copiarWhatsApp() {
     await navigator.clipboard.writeText(gerarTextoWhatsApp(invoice, divisao));
     setCopiado(true);
@@ -148,6 +176,7 @@ function InvoiceSplit({ invoice }: { invoice: CardInvoice }) {
                 <th>Individual</th>
                 <th>Compartilhado</th>
                 <th>Total</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -160,6 +189,16 @@ function InvoiceSplit({ invoice }: { invoice: CardInvoice }) {
                   <td>{formatBRL(divisao.compartilhados.total / divisao.pessoas.length)}</td>
                   <td>
                     <strong>{formatBRL(divisao.totalPorPessoa[p])}</strong>
+                  </td>
+                  <td>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => cobrarMutation.mutate(p)}
+                      disabled={cobrarMutation.isPending}
+                      title={`Cria um lançamento "a receber" de ${p} no valor da parte dela(e)`}
+                    >
+                      Cobrar
+                    </button>
                   </td>
                 </tr>
               ))}

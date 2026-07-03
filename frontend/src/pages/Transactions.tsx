@@ -27,6 +27,134 @@ function novoLancamentoInicial(mes: number, ano: number) {
   };
 }
 
+function TransactionEditRow({
+  transaction,
+  accounts,
+  categories,
+  onClose,
+  onSaved,
+}: {
+  transaction: Transaction;
+  accounts: Account[] | undefined;
+  categories: Category[] | undefined;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    accountId: String(transaction.accountId),
+    categoryId: String(transaction.categoryId),
+    descricao: transaction.descricao,
+    valorTotal: String(transaction.valorTotal),
+    dataVencimento: transaction.dataVencimento ?? '',
+    parcelaAtual: transaction.parcelaAtual !== null ? String(transaction.parcelaAtual) : '',
+    parcelaTotal: transaction.parcelaTotal !== null ? String(transaction.parcelaTotal) : '',
+    recorrente: transaction.recorrente,
+  });
+
+  const mutation = useMutation({
+    mutationFn: async () =>
+      api.post(`/transactions/${transaction.id}/update`, {
+        accountId: Number(form.accountId),
+        categoryId: Number(form.categoryId),
+        descricao: form.descricao,
+        valorTotal: Number(form.valorTotal),
+        dataVencimento: form.dataVencimento || null,
+        parcelaAtual: form.parcelaAtual === '' ? null : Number(form.parcelaAtual),
+        parcelaTotal: form.parcelaTotal === '' ? null : Number(form.parcelaTotal),
+        recorrente: form.recorrente,
+      }),
+    onSuccess: () => {
+      onSaved();
+      onClose();
+    },
+  });
+
+  return (
+    <tr>
+      <td colSpan={6} style={{ background: 'var(--bg)' }}>
+        <div className="form-grid" style={{ padding: '0.5rem 0' }}>
+          <div className="form-field">
+            <label>Descrição</label>
+            <input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
+          </div>
+          <div className="form-field">
+            <label>Conta</label>
+            <select value={form.accountId} onChange={(e) => setForm({ ...form, accountId: e.target.value })}>
+              {accounts?.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-field">
+            <label>Categoria</label>
+            <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
+              {categories?.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-field">
+            <label>Valor</label>
+            <input
+              type="number"
+              step="0.01"
+              value={form.valorTotal}
+              onChange={(e) => setForm({ ...form, valorTotal: e.target.value })}
+            />
+          </div>
+          <div className="form-field">
+            <label>Vencimento</label>
+            <input
+              type="date"
+              value={form.dataVencimento}
+              onChange={(e) => setForm({ ...form, dataVencimento: e.target.value })}
+            />
+          </div>
+          <div className="form-field">
+            <label>Parcela</label>
+            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+              <input
+                value={form.parcelaAtual}
+                onChange={(e) => setForm({ ...form, parcelaAtual: e.target.value.replace(/\D/g, '') })}
+                style={{ width: 55 }}
+              />
+              <span className="text-muted">/</span>
+              <input
+                value={form.parcelaTotal}
+                onChange={(e) => setForm({ ...form, parcelaTotal: e.target.value.replace(/\D/g, '') })}
+                style={{ width: 55 }}
+              />
+            </div>
+          </div>
+          <div className="form-field">
+            <label>Recorrente?</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 400 }}>
+              <input
+                type="checkbox"
+                checked={form.recorrente}
+                onChange={(e) => setForm({ ...form, recorrente: e.target.checked })}
+              />
+              Repete todo mês
+            </label>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            Salvar
+          </button>
+          <button className="btn btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function novaTransferenciaInicial() {
   return { contaOrigemId: '', contaDestinoId: '', valor: '', data: new Date().toISOString().slice(0, 10), descricao: '' };
 }
@@ -170,11 +298,32 @@ export function Transactions() {
     },
   });
 
+  const mesAnterior = mes === 1 ? 12 : mes - 1;
+  const anoAnterior = mes === 1 ? ano - 1 : ano;
+
+  const { data: transacoesMesAnterior } = useQuery({
+    queryKey: ['transactions', mesAnterior, anoAnterior],
+    queryFn: async () =>
+      (await api.get<Transaction[]>('/transactions', { params: { mes: mesAnterior, ano: anoAnterior } })).data,
+  });
+
+  const descricoesDoMes = new Set((transactions ?? []).map((t) => t.descricao));
+  const candidatasRecorrencia = (transacoesMesAnterior ?? []).filter((t) => {
+    const parcelaEmAndamento = t.parcelaTotal !== null && t.parcelaAtual !== null && t.parcelaAtual < t.parcelaTotal;
+    return (t.recorrente || parcelaEmAndamento) && !descricoesDoMes.has(t.descricao);
+  });
+
+  const [selecionadas, setSelecionadas] = useState<Set<number>>(new Set());
+  const [painelGerarAberto, setPainelGerarAberto] = useState(false);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+
   const generateMutation = useMutation({
-    mutationFn: async () => (await api.post('/transactions/generate-month', { mes, ano })).data,
+    mutationFn: async () =>
+      (await api.post('/transactions/generate-month', { mes, ano, ids: [...selecionadas] })).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions', mes, ano] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
+      setPainelGerarAberto(false);
     },
   });
 
@@ -204,11 +353,13 @@ export function Transactions() {
         />
         <button
           className="btn btn-secondary"
-          onClick={() => generateMutation.mutate()}
-          disabled={generateMutation.isPending}
+          onClick={() => {
+            setSelecionadas(new Set(candidatasRecorrencia.map((t) => t.id)));
+            setPainelGerarAberto(!painelGerarAberto);
+          }}
           title="Copia do mês anterior as contas recorrentes (água, luz, salário...) e avança as parcelas em andamento"
         >
-          {generateMutation.isPending ? 'Gerando...' : '⟳ Gerar contas do mês'}
+          ⟳ Gerar contas do mês
         </button>
         {generateMutation.isSuccess && (
           <span className="text-success" style={{ alignSelf: 'center', fontSize: '0.85rem' }}>
@@ -216,6 +367,53 @@ export function Transactions() {
           </span>
         )}
       </div>
+
+      {painelGerarAberto && (
+        <div className="card chart-section">
+          <h3>
+            O que trazer de {NOMES_MES[mesAnterior - 1]} para {NOMES_MES[mes - 1]}?
+          </h3>
+          {candidatasRecorrencia.length === 0 ? (
+            <p className="text-muted">Nada para gerar: nenhuma recorrência ou parcela em andamento no mês anterior.</p>
+          ) : (
+            <>
+              {candidatasRecorrencia.map((t) => {
+                const proximaParcela =
+                  t.parcelaAtual && t.parcelaTotal ? ` (parcela ${t.parcelaAtual + 1}/${t.parcelaTotal})` : '';
+                return (
+                  <label key={t.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.3rem 0' }}>
+                    <input
+                      type="checkbox"
+                      checked={selecionadas.has(t.id)}
+                      onChange={(e) => {
+                        const nova = new Set(selecionadas);
+                        if (e.target.checked) nova.add(t.id);
+                        else nova.delete(t.id);
+                        setSelecionadas(nova);
+                      }}
+                    />
+                    <span>
+                      {t.descricao}
+                      {proximaParcela}
+                    </span>
+                    <span className="text-muted" style={{ marginLeft: 'auto' }}>
+                      {formatBRL(t.valorTotal)}
+                    </span>
+                  </label>
+                );
+              })}
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+                <button className="btn" onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending || selecionadas.size === 0}>
+                  {generateMutation.isPending ? 'Gerando...' : `Gerar ${selecionadas.size} selecionada(s)`}
+                </button>
+                <button className="btn btn-secondary" onClick={() => setPainelGerarAberto(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <form className="card chart-section" onSubmit={handleSubmit}>
         <h3>Novo lançamento</h3>
@@ -360,41 +558,63 @@ export function Transactions() {
             </thead>
             <tbody>
               {transactions?.map((t) => (
-                <tr key={t.id}>
-                  <td>
-                    {t.descricao}
-                    {t.parcelaAtual && t.parcelaTotal && (
-                      <span className="text-muted" style={{ marginLeft: 6, fontSize: '0.8rem' }}>
-                        ({t.parcelaAtual}/{t.parcelaTotal})
-                      </span>
-                    )}
-                    {t.recorrente && (
-                      <span className="text-muted" style={{ marginLeft: 6, fontSize: '0.8rem' }} title="Recorrente">
-                        ⟳
-                      </span>
-                    )}
-                  </td>
-                  <td>{t.Account?.nome}</td>
-                  <td>{t.Category?.nome}</td>
-                  <td>{formatBRL(t.valorTotal)}</td>
-                  <td>
-                    <select
-                      value={t.status}
-                      onChange={(e) => statusMutation.mutate({ id: t.id, status: e.target.value as StatusTransacao })}
-                    >
-                      {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <button className="btn btn-secondary" onClick={() => deleteMutation.mutate(t.id)}>
-                      Remover
-                    </button>
-                  </td>
-                </tr>
+                <>
+                  <tr key={t.id}>
+                    <td>
+                      {t.descricao}
+                      {t.parcelaAtual && t.parcelaTotal && (
+                        <span className="text-muted" style={{ marginLeft: 6, fontSize: '0.8rem' }}>
+                          ({t.parcelaAtual}/{t.parcelaTotal})
+                        </span>
+                      )}
+                      {t.recorrente && (
+                        <span className="text-muted" style={{ marginLeft: 6, fontSize: '0.8rem' }} title="Recorrente">
+                          ⟳
+                        </span>
+                      )}
+                    </td>
+                    <td>{t.Account?.nome}</td>
+                    <td>{t.Category?.nome}</td>
+                    <td>{formatBRL(t.valorTotal)}</td>
+                    <td>
+                      <select
+                        value={t.status}
+                        onChange={(e) => statusMutation.mutate({ id: t.id, status: e.target.value as StatusTransacao })}
+                      >
+                        {Object.entries(STATUS_LABEL).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setEditandoId(editandoId === t.id ? null : t.id)}
+                      >
+                        Editar
+                      </button>
+                      <button className="btn btn-secondary" onClick={() => deleteMutation.mutate(t.id)}>
+                        Remover
+                      </button>
+                    </td>
+                  </tr>
+                  {editandoId === t.id && (
+                    <TransactionEditRow
+                      key={`edit-${t.id}`}
+                      transaction={t}
+                      accounts={accounts}
+                      categories={categories}
+                      onClose={() => setEditandoId(null)}
+                      onSaved={() => {
+                        queryClient.invalidateQueries({ queryKey: ['transactions', mes, ano] });
+                        queryClient.invalidateQueries({ queryKey: ['summary'] });
+                        queryClient.invalidateQueries({ queryKey: ['accounts'] });
+                      }}
+                    />
+                  )}
+                </>
               ))}
               {transactions?.length === 0 && (
                 <tr>

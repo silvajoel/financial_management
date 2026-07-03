@@ -60,6 +60,18 @@ export function Dashboard() {
   const cartoes = (accounts ?? []).filter((a) => a.tipo === 'credito');
   const parcelasAtivas = (transacoesMes ?? []).filter((t) => t.parcelaTotal && t.parcelaAtual);
 
+  // Previsão do próximo mês: recorrências + parcelas que ainda vão avançar,
+  // com o valor atual como estimativa.
+  const previsao = (transacoesMes ?? []).filter((t) => {
+    const parcelaEmAndamento = t.parcelaTotal !== null && t.parcelaAtual !== null && t.parcelaAtual < t.parcelaTotal;
+    return t.recorrente || parcelaEmAndamento;
+  });
+  const previsaoSaidas = previsao.filter((t) => t.Category?.tipo === 'despesa' || t.Category?.tipo === 'investimento');
+  const previsaoEntradas = previsao.filter((t) => t.Category?.tipo === 'receita');
+  const totalPrevistoSaidas = previsaoSaidas.reduce((acc, t) => acc + Number(t.valorTotal), 0);
+  const totalPrevistoEntradas = previsaoEntradas.reduce((acc, t) => acc + Number(t.valorTotal), 0);
+  const proximoMes = mes === 12 ? 1 : mes + 1;
+
   if (carregandoSummary) return <p className="text-muted">Carregando...</p>;
 
   return (
@@ -126,6 +138,36 @@ export function Dashboard() {
                   formatoValor={(v) => `${v}x`}
                 />
               ))}
+            </div>
+          )}
+
+          {previsao.length > 0 && (
+            <div className="card chart-section">
+              <h3>Previsão de {NOMES_MES[proximoMes - 1]}</h3>
+              {previsaoSaidas.map((t) => (
+                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.2rem 0' }}>
+                  <span>
+                    {t.descricao}
+                    {t.parcelaAtual && t.parcelaTotal && (
+                      <span className="text-muted"> ({t.parcelaAtual + 1}/{t.parcelaTotal})</span>
+                    )}
+                  </span>
+                  <span>{formatBRL(t.valorTotal)}</span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, borderTop: '1px solid var(--border)', paddingTop: '0.4rem', marginTop: '0.4rem' }}>
+                <span>Saídas previstas</span>
+                <span className="text-danger">{formatBRL(totalPrevistoSaidas)}</span>
+              </div>
+              {previsaoEntradas.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                  <span>Entradas previstas</span>
+                  <span className="text-success">{formatBRL(totalPrevistoEntradas)}</span>
+                </div>
+              )}
+              <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: 0 }}>
+                Estimativa com os valores deste mês; parcelas avançam automaticamente.
+              </p>
             </div>
           )}
         </div>
