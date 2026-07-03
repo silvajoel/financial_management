@@ -1,6 +1,6 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize';
 
-export type Instituicao = 'banco_do_brasil' | 'mercado_pago' | 'sicoob' | 'nubank';
+export type Instituicao = string;
 export type TipoConta = 'credito' | 'debito' | 'investimento' | 'emprestimo';
 
 export interface AccountAttributes {
@@ -35,7 +35,7 @@ export function initAccount(sequelize: Sequelize) {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
       nome: { type: DataTypes.STRING, allowNull: false },
       instituicao: {
-        type: DataTypes.ENUM('banco_do_brasil', 'mercado_pago', 'sicoob', 'nubank'),
+        type: DataTypes.STRING(100),
         allowNull: false,
       },
       tipo: {

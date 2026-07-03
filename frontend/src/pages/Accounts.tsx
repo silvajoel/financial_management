@@ -1,15 +1,8 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { Account, Instituicao, TipoConta } from '../api/types';
+import type { Account, TipoConta } from '../api/types';
 import { formatBRL } from '../utils/format';
-
-const NOMES_INSTITUICAO: Record<Instituicao, string> = {
-  banco_do_brasil: 'Banco do Brasil',
-  mercado_pago: 'Mercado Pago',
-  sicoob: 'Sicoob',
-  nubank: 'Nubank',
-};
 
 const NOMES_TIPO: Record<TipoConta, string> = {
   credito: 'Crédito',
@@ -17,6 +10,8 @@ const NOMES_TIPO: Record<TipoConta, string> = {
   investimento: 'Investimento',
   emprestimo: 'Empréstimo',
 };
+
+const INSTITUICOES_CONHECIDAS = ['Banco do Brasil', 'Mercado Pago', 'Sicoob', 'Nubank'];
 
 function EditableAccountRow({ account }: { account: Account }) {
   const queryClient = useQueryClient();
@@ -74,6 +69,95 @@ function EditableAccountRow({ account }: { account: Account }) {
   );
 }
 
+function novaContaInicial() {
+  return { nome: '', instituicao: '', tipo: 'debito' as TipoConta, saldo: '', limite: '' };
+}
+
+function NovaContaForm() {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState(novaContaInicial());
+
+  const mutation = useMutation({
+    mutationFn: async () =>
+      api.post('/accounts', {
+        nome: form.nome,
+        instituicao: form.instituicao,
+        tipo: form.tipo,
+        saldo: form.saldo === '' ? 0 : Number(form.saldo),
+        limite: form.limite === '' ? null : Number(form.limite),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      setForm(novaContaInicial());
+    },
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!form.nome || !form.instituicao) return;
+    mutation.mutate();
+  }
+
+  return (
+    <form className="card chart-section" onSubmit={handleSubmit}>
+      <h3>Nova conta</h3>
+      <div className="form-grid">
+        <div className="form-field">
+          <label>Instituição</label>
+          <input
+            list="instituicoes-conhecidas"
+            value={form.instituicao}
+            onChange={(e) => setForm({ ...form, instituicao: e.target.value })}
+            placeholder="Ex.: Banco do Brasil, Caixa, Inter..."
+            required
+          />
+          <datalist id="instituicoes-conhecidas">
+            {INSTITUICOES_CONHECIDAS.map((nome) => (
+              <option key={nome} value={nome} />
+            ))}
+          </datalist>
+        </div>
+        <div className="form-field">
+          <label>Nome da conta</label>
+          <input
+            value={form.nome}
+            onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            placeholder="Ex.: Caixa - Crédito"
+            required
+          />
+        </div>
+        <div className="form-field">
+          <label>Tipo</label>
+          <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoConta })}>
+            {Object.entries(NOMES_TIPO).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-field">
+          <label>Saldo inicial</label>
+          <input value={form.saldo} onChange={(e) => setForm({ ...form, saldo: e.target.value })} placeholder="0,00" />
+        </div>
+        {form.tipo === 'credito' && (
+          <div className="form-field">
+            <label>Limite disponível</label>
+            <input
+              value={form.limite}
+              onChange={(e) => setForm({ ...form, limite: e.target.value })}
+              placeholder="Ex.: 10000"
+            />
+          </div>
+        )}
+      </div>
+      <button className="btn" type="submit" style={{ marginTop: '0.75rem' }} disabled={mutation.isPending}>
+        Adicionar conta
+      </button>
+    </form>
+  );
+}
+
 export function Accounts() {
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['accounts'],
@@ -92,9 +176,12 @@ export function Accounts() {
   return (
     <div>
       <h2 style={{ marginTop: 0 }}>Contas</h2>
+
+      <NovaContaForm />
+
       {grupos.map(([instituicao, contas]) => (
         <div key={instituicao} className="card chart-section">
-          <h3>{NOMES_INSTITUICAO[instituicao as Instituicao]}</h3>
+          <h3>{instituicao}</h3>
           <table>
             <thead>
               <tr>

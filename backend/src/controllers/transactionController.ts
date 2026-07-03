@@ -1,6 +1,5 @@
 import { Response } from 'express';
-import { Op } from 'sequelize';
-import { Transaction, Category, Account } from '../models';
+import { Transaction, Category, Account, sequelize } from '../models';
 import { AuthenticatedRequest } from '../middleware/auth';
 
 function parseFilters(req: AuthenticatedRequest) {
@@ -110,6 +109,65 @@ export async function remove(req: AuthenticatedRequest, res: Response) {
   if (!transaction) return res.status(404).json({ error: 'Lançamento não encontrado' });
   await transaction.destroy();
   res.status(204).send();
+}
+
+export async function transfer(req: AuthenticatedRequest, res: Response) {
+  const { contaOrigemId, contaDestinoId, valor, data, descricao } = req.body;
+
+  if (!contaOrigemId || !contaDestinoId || !valor || !data) {
+    return res.status(400).json({ error: 'contaOrigemId, contaDestinoId, valor e data são obrigatórios' });
+  }
+  if (Number(contaOrigemId) === Number(contaDestinoId)) {
+    return res.status(400).json({ error: 'Conta de origem e destino não podem ser a mesma' });
+  }
+
+  const [contaOrigem, contaDestino, categoriaTransferencia] = await Promise.all([
+    Account.findByPk(contaOrigemId),
+    Account.findByPk(contaDestinoId),
+    Category.findOne({ where: { tipo: 'transferencia' } }),
+  ]);
+
+  if (!contaOrigem || !contaDestino) return res.status(404).json({ error: 'Conta não encontrada' });
+  if (!categoriaTransferencia) {
+    return res.status(500).json({ error: "Categoria padrão de transferência não encontrada" });
+  }
+
+  const [ano, mes] = String(data).split('-').map(Number);
+  const desc = descricao || `Transferência ${contaOrigem.nome} → ${contaDestino.nome}`;
+
+  const resultado = await sequelize.transaction(async (t) => {
+    const saida = await Transaction.create(
+      {
+        accountId: contaOrigem.id,
+        categoryId: categoriaTransferencia.id,
+        descricao: `${desc} (saída)`,
+        valorTotal: valor,
+        valorPago: valor,
+        status: 'pago',
+        competenciaMes: mes,
+        competenciaAno: ano,
+        dataPagamento: data,
+      },
+      { transaction: t },
+    );
+    const entrada = await Transaction.create(
+      {
+        accountId: contaDestino.id,
+        categoryId: categoriaTransferencia.id,
+        descricao: `${desc} (entrada)`,
+        valorTotal: valor,
+        valorPago: valor,
+        status: 'pago',
+        competenciaMes: mes,
+        competenciaAno: ano,
+        dataPagamento: data,
+      },
+      { transaction: t },
+    );
+    return { saida, entrada };
+  });
+
+  res.status(201).json(resultado);
 }
 
 export async function summary(req: AuthenticatedRequest, res: Response) {

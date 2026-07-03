@@ -1,6 +1,6 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize';
 
-export type TipoCategoria = 'receita' | 'despesa' | 'investimento';
+export type TipoCategoria = 'receita' | 'despesa' | 'investimento' | 'transferencia';
 
 export interface CategoryAttributes {
   id: number;
@@ -28,7 +28,7 @@ export function initCategory(sequelize: Sequelize) {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
       nome: { type: DataTypes.STRING, allowNull: false },
       tipo: {
-        type: DataTypes.ENUM('receita', 'despesa', 'investimento'),
+        type: DataTypes.ENUM('receita', 'despesa', 'investimento', 'transferencia'),
         allowNull: false,
       },
       cor: { type: DataTypes.STRING(7), allowNull: true },

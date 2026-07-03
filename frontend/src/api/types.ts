@@ -1,6 +1,6 @@
-export type Instituicao = 'banco_do_brasil' | 'mercado_pago' | 'sicoob' | 'nubank';
+export type Instituicao = string;
 export type TipoConta = 'credito' | 'debito' | 'investimento' | 'emprestimo';
-export type TipoCategoria = 'receita' | 'despesa' | 'investimento';
+export type TipoCategoria = 'receita' | 'despesa' | 'investimento' | 'transferencia';
 export type StatusTransacao = 'pago' | 'parcial' | 'em_aberto' | 'liquidado';
 
 export interface Account {

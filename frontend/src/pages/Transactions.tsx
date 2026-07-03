@@ -24,6 +24,87 @@ function novoLancamentoInicial(mes: number, ano: number) {
   };
 }
 
+function novaTransferenciaInicial() {
+  return { contaOrigemId: '', contaDestinoId: '', valor: '', data: new Date().toISOString().slice(0, 10), descricao: '' };
+}
+
+function TransferForm({ accounts, onDone }: { accounts: Account[] | undefined; onDone: () => void }) {
+  const [form, setForm] = useState(novaTransferenciaInicial());
+
+  const mutation = useMutation({
+    mutationFn: async () =>
+      api.post('/transactions/transfer', {
+        contaOrigemId: Number(form.contaOrigemId),
+        contaDestinoId: Number(form.contaDestinoId),
+        valor: Number(form.valor),
+        data: form.data,
+        descricao: form.descricao || undefined,
+      }),
+    onSuccess: () => {
+      setForm(novaTransferenciaInicial());
+      onDone();
+    },
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!form.contaOrigemId || !form.contaDestinoId || !form.valor) return;
+    mutation.mutate();
+  }
+
+  return (
+    <form className="card chart-section" onSubmit={handleSubmit}>
+      <h3>Transferir entre contas</h3>
+      <div className="form-grid">
+        <div className="form-field">
+          <label>De</label>
+          <select value={form.contaOrigemId} onChange={(e) => setForm({ ...form, contaOrigemId: e.target.value })} required>
+            <option value="">Selecione</option>
+            {accounts?.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-field">
+          <label>Para</label>
+          <select value={form.contaDestinoId} onChange={(e) => setForm({ ...form, contaDestinoId: e.target.value })} required>
+            <option value="">Selecione</option>
+            {accounts?.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-field">
+          <label>Valor</label>
+          <input
+            type="number"
+            step="0.01"
+            value={form.valor}
+            onChange={(e) => setForm({ ...form, valor: e.target.value })}
+            required
+          />
+        </div>
+        <div className="form-field">
+          <label>Data</label>
+          <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} required />
+        </div>
+        <div className="form-field">
+          <label>Descrição (opcional)</label>
+          <input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
+        </div>
+      </div>
+      <button className="btn" type="submit" style={{ marginTop: '0.75rem' }} disabled={mutation.isPending}>
+        Transferir
+      </button>
+      {mutation.isError && <p className="text-danger">Não foi possível transferir. Confira as contas selecionadas.</p>}
+    </form>
+  );
+}
+
 export function Transactions() {
   const hoje = new Date();
   const [mes, setMes] = useState(hoje.getMonth() + 1);
@@ -167,6 +248,14 @@ export function Transactions() {
           Adicionar
         </button>
       </form>
+
+      <TransferForm
+        accounts={accounts}
+        onDone={() => {
+          queryClient.invalidateQueries({ queryKey: ['transactions', mes, ano] });
+          queryClient.invalidateQueries({ queryKey: ['accounts'] });
+        }}
+      />
 
       <div className="card">
         {isLoading ? (
