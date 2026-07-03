@@ -25,9 +25,9 @@ npm run dev
 ```
 
 API sobe em `http://localhost:3001`. O seed cria:
-- 1 usuário admin (login exibido no console na primeira execução)
-- As 4 contas: Banco do Brasil (crédito e débito), Mercado Pago (débito e investimentos), Sicoob (empréstimo), Nubank (crédito e débito)
-- Categorias-base: Conta de Luz, Água, Aluguel, Cartão de Crédito, Trabalhos Freelancer, Investimentos, Telefone, Hosting, entre outras
+- 1 usuário admin — login/senha vêm de `ADMIN_EMAIL`/`ADMIN_PASSWORD` no `.env` (troque antes de rodar em produção)
+- As contas: Banco do Brasil (débito e crédito), Mercado Pago (débito, investimentos e cofrinho), Sicoob (empréstimo), Nubank (débito e crédito)
+- Categorias-base: Conta de Luz, Água, Aluguel, Cartão de Crédito, Trabalhos Freelancer, Investimentos, Telefone, Hosting, entre outras, além de regras de categorização automática para a importação de fatura
 
 ## 3. Frontend
 
@@ -44,3 +44,7 @@ Acesse `http://localhost:5173`.
 Na tela "Importar Fatura", envie o PDF (Banco do Brasil) ou CSV (formato genérico `data,descricao,valor[,categoria]`) da fatura do cartão. O sistema extrai os lançamentos, sugere categorias e mostra uma tela de revisão — nada é gravado até você confirmar.
 
 O parser do Nubank ainda é best-effort (sem amostra real calibrada). Se a extração vier incompleta, use a opção de importar CSV genérico exportado do app do Nubank, ou ajuste manualmente na tela de revisão.
+
+## Saldos, metas e lançamentos reais
+
+O seed só cria estrutura (contas, categorias, regras). Saldos reais, metas financeiras e lançamentos do dia a dia são cadastrados por você direto na aplicação (telas Contas, Lançamentos e, futuramente, uma tela de Metas — hoje via API `POST /api/goals`) e ficam só no banco de dados, nunca no git.
