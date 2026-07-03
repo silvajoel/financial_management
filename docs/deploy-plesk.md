@@ -26,13 +26,15 @@ Guia manual de deploy (não executado por automação — envolve credenciais do
    DB_PORT=3306
    DB_NAME=financeiro
    DB_USER=<usuário>
-   DB_PASSWORD=<senha>
+   DB_PASSWORD="<senha>"
    JWT_SECRET=<segredo forte gerado só para produção>
    JWT_EXPIRES_IN=7d
    ADMIN_EMAIL=<seu email>
    ADMIN_PASSWORD=<senha forte só de uso único no seed>
    CORS_ORIGIN=https://<domínio do frontend>
    ```
+   > Se a senha do banco tiver `#`, coloque entre aspas — sem aspas o dotenv corta o valor
+   > ali, tratando o resto como comentário (isso já causou um "access denied" real aqui).
 6. Rode as migrations e o seed contra o banco de produção (via terminal do Plesk ou SSH):
    ```bash
    npx sequelize-cli db:migrate
