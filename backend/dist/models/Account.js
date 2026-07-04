@@ -15,7 +15,7 @@ function initAccount(sequelize) {
             allowNull: false,
         },
         tipo: {
-            type: sequelize_1.DataTypes.ENUM('credito', 'debito', 'investimento', 'emprestimo'),
+            type: sequelize_1.DataTypes.ENUM('credito', 'conta_corrente', 'investimento', 'emprestimo'),
             allowNull: false,
         },
         limite: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: true },
