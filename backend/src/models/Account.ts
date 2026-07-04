@@ -1,7 +1,7 @@
 import { DataTypes, Model, Optional, Sequelize } from 'sequelize';
 
 export type Instituicao = string;
-export type TipoConta = 'credito' | 'debito' | 'investimento' | 'emprestimo';
+export type TipoConta = 'credito' | 'conta_corrente' | 'investimento' | 'emprestimo';
 
 export interface AccountAttributes {
   id: number;
@@ -46,7 +46,7 @@ export function initAccount(sequelize: Sequelize) {
         allowNull: false,
       },
       tipo: {
-        type: DataTypes.ENUM('credito', 'debito', 'investimento', 'emprestimo'),
+        type: DataTypes.ENUM('credito', 'conta_corrente', 'investimento', 'emprestimo'),
         allowNull: false,
       },
       limite: { type: DataTypes.DECIMAL(12, 2), allowNull: true },

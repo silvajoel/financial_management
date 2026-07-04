@@ -120,7 +120,7 @@ function InvoiceSplit({ invoice }: { invoice: CardInvoice }) {
   const cobrarMutation = useMutation({
     mutationFn: async (pessoa: string) => {
       const categoria = categories?.find((c) => c.nome === 'Outras Receitas');
-      const conta = accounts?.find((a) => a.tipo === 'debito');
+      const conta = accounts?.find((a) => a.tipo === 'conta_corrente');
       if (!categoria || !conta) throw new Error('Categoria/conta padrão não encontrada');
       return api.post('/transactions', {
         accountId: conta.id,

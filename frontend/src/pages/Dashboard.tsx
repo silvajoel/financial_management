@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Account, Goal, Transaction, TransactionSummary } from '../api/types';
@@ -8,11 +9,10 @@ import { CategoryBarChart } from '../components/charts/CategoryBarChart';
 import { SaldoTrendChart } from '../components/charts/SaldoTrendChart';
 import { formatBRL, NOMES_MES } from '../utils/format';
 
-function ultimosMeses(qtd: number) {
-  const hoje = new Date();
+function ultimosMeses(qtd: number, fimMes: number, fimAno: number) {
   const meses: { mes: number; ano: number }[] = [];
   for (let i = qtd - 1; i >= 0; i--) {
-    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    const d = new Date(fimAno, fimMes - 1 - i, 1);
     meses.push({ mes: d.getMonth() + 1, ano: d.getFullYear() });
   }
   return meses;
@@ -20,8 +20,8 @@ function ultimosMeses(qtd: number) {
 
 export function Dashboard() {
   const hoje = new Date();
-  const mes = hoje.getMonth() + 1;
-  const ano = hoje.getFullYear();
+  const [mes, setMes] = useState(hoje.getMonth() + 1);
+  const [ano, setAno] = useState(hoje.getFullYear());
 
   const { data: summary, isLoading: carregandoSummary } = useQuery({
     queryKey: ['summary', mes, ano],
@@ -29,9 +29,9 @@ export function Dashboard() {
   });
 
   const { data: trend } = useQuery({
-    queryKey: ['summary-trend'],
+    queryKey: ['summary-trend', mes, ano],
     queryFn: async () => {
-      const meses = ultimosMeses(6);
+      const meses = ultimosMeses(6, mes, ano);
       const resultados = await Promise.all(
         meses.map((m) => api.get<TransactionSummary>('/transactions/summary', { params: m })),
       );
@@ -57,7 +57,7 @@ export function Dashboard() {
     queryFn: async () => (await api.get<Account[]>('/accounts')).data,
   });
 
-  const cartoes = (accounts ?? []).filter((a) => a.tipo === 'credito');
+  const cartoes = (accounts ?? []).filter((a) => a.tipo === 'credito' || a.tipo === 'conta_corrente');
   const parcelasAtivas = (transacoesMes ?? []).filter((t) => t.parcelaTotal && t.parcelaAtual);
 
   // Previsão do próximo mês: recorrências + parcelas que ainda vão avançar,
@@ -77,9 +77,16 @@ export function Dashboard() {
   return (
     <div>
       <h2 style={{ marginTop: 0 }}>Dashboard</h2>
-      <p className="text-muted" style={{ marginTop: -8 }}>
-        {NOMES_MES[mes - 1]}/{ano}
-      </p>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <select value={mes} onChange={(e) => setMes(Number(e.target.value))}>
+          {NOMES_MES.map((nome, i) => (
+            <option key={nome} value={i + 1}>
+              {nome}
+            </option>
+          ))}
+        </select>
+        <input type="number" value={ano} onChange={(e) => setAno(Number(e.target.value))} style={{ width: 90 }} />
+      </div>
 
       <div className="stat-grid">
         <StatTile label="Receita do mês" value={formatBRL(summary?.receitaTotal ?? 0)} tone="good" />
@@ -94,7 +101,7 @@ export function Dashboard() {
 
       {cartoes.length > 0 && (
         <div className="chart-section">
-          <h3>Cartões de crédito</h3>
+          <h3>Cartões</h3>
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             {cartoes.map((c) => (
               <CreditCardVisual key={c.id} account={c} />

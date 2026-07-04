@@ -1,5 +1,5 @@
 export type Instituicao = string;
-export type TipoConta = 'credito' | 'debito' | 'investimento' | 'emprestimo';
+export type TipoConta = 'credito' | 'conta_corrente' | 'investimento' | 'emprestimo';
 export type TipoCategoria = 'receita' | 'despesa' | 'investimento' | 'transferencia';
 export type StatusTransacao = 'pago' | 'parcial' | 'em_aberto' | 'liquidado';
 

@@ -6,7 +6,7 @@ import { formatBRL } from '../utils/format';
 
 const NOMES_TIPO: Record<TipoConta, string> = {
   credito: 'Crédito',
-  debito: 'Débito',
+  conta_corrente: 'Conta Corrente',
   investimento: 'Investimento',
   emprestimo: 'Empréstimo',
 };
@@ -72,7 +72,7 @@ function EditableAccountRow({ account }: { account: Account }) {
 const BANDEIRAS = ['Visa', 'Mastercard', 'Elo', 'Amex'];
 
 function novaContaInicial() {
-  return { nome: '', instituicao: '', tipo: 'debito' as TipoConta, saldo: '', limite: '', bandeira: '', ultimosDigitos: '' };
+  return { nome: '', instituicao: '', tipo: 'conta_corrente' as TipoConta, saldo: '', limite: '', bandeira: '', ultimosDigitos: '' };
 }
 
 function NovaContaForm() {
@@ -149,15 +149,17 @@ function NovaContaForm() {
           <input value={form.saldo} onChange={(e) => setForm({ ...form, saldo: e.target.value })} placeholder="0,00" />
         </div>
         {form.tipo === 'credito' && (
+          <div className="form-field">
+            <label>Limite disponível</label>
+            <input
+              value={form.limite}
+              onChange={(e) => setForm({ ...form, limite: e.target.value })}
+              placeholder="Ex.: 10000"
+            />
+          </div>
+        )}
+        {(form.tipo === 'credito' || form.tipo === 'conta_corrente') && (
           <>
-            <div className="form-field">
-              <label>Limite disponível</label>
-              <input
-                value={form.limite}
-                onChange={(e) => setForm({ ...form, limite: e.target.value })}
-                placeholder="Ex.: 10000"
-              />
-            </div>
             <div className="form-field">
               <label>Bandeira</label>
               <input

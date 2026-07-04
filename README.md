@@ -4,7 +4,7 @@ Sistema web pessoal de controle financeiro: contas (Banco do Brasil, Mercado Pag
 
 ## Funcionalidades
 
-- **Contas**: Banco do Brasil (crédito/débito), Mercado Pago (débito/investimentos/cofrinho), Sicoob (empréstimo), Nubank (crédito/débito), com saldo e limite editáveis
+- **Contas**: Banco do Brasil (crédito/conta corrente), Mercado Pago (conta corrente/investimentos/cofrinho), Sicoob (empréstimo), Nubank (crédito/conta corrente), com saldo e limite editáveis
 - **Lançamentos**: receitas, despesas, parcelas e contas recorrentes, com status (pago/parcial/em aberto/liquidado) e competência mensal
 - **Importação de fatura de cartão**: upload de PDF (parser dedicado para Banco do Brasil) ou CSV (formato genérico e Nubank), com extração automática, categorização sugerida e tela de revisão antes de confirmar
 - **Metas financeiras**: valor alvo, prazo, aporte mensal planejado, vinculadas a uma conta
