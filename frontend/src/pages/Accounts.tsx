@@ -13,17 +13,31 @@ const NOMES_TIPO: Record<TipoConta, string> = {
 
 const INSTITUICOES_CONHECIDAS = ['Banco do Brasil', 'Mercado Pago', 'Sicoob', 'Nubank'];
 
+const BANDEIRAS = ['Visa', 'Mastercard', 'Elo', 'Amex'];
+
 function EditableAccountRow({ account }: { account: Account }) {
   const queryClient = useQueryClient();
   const [editando, setEditando] = useState(false);
-  const [saldo, setSaldo] = useState(String(account.saldo));
-  const [limite, setLimite] = useState(account.limite !== null ? String(account.limite) : '');
+  const [form, setForm] = useState({
+    nome: account.nome,
+    instituicao: account.instituicao,
+    tipo: account.tipo,
+    saldo: String(account.saldo),
+    limite: account.limite !== null ? String(account.limite) : '',
+    bandeira: account.bandeira ?? '',
+    ultimosDigitos: account.ultimosDigitos ?? '',
+  });
 
   const mutation = useMutation({
     mutationFn: async () =>
       api.post(`/accounts/${account.id}/update`, {
-        saldo: Number(saldo),
-        limite: limite === '' ? null : Number(limite),
+        nome: form.nome,
+        instituicao: form.instituicao,
+        tipo: form.tipo,
+        saldo: Number(form.saldo),
+        limite: form.limite === '' ? null : Number(form.limite),
+        bandeira: form.bandeira || null,
+        ultimosDigitos: form.ultimosDigitos || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
@@ -49,27 +63,81 @@ function EditableAccountRow({ account }: { account: Account }) {
 
   return (
     <tr>
-      <td>{account.nome}</td>
-      <td>{NOMES_TIPO[account.tipo]}</td>
-      <td>
-        <input value={saldo} onChange={(e) => setSaldo(e.target.value)} style={{ width: 110 }} />
-      </td>
-      <td>
-        <input value={limite} onChange={(e) => setLimite(e.target.value)} style={{ width: 110 }} placeholder="—" />
-      </td>
-      <td style={{ display: 'flex', gap: '0.4rem' }}>
-        <button className="btn" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-          Salvar
-        </button>
-        <button className="btn btn-secondary" onClick={() => setEditando(false)}>
-          Cancelar
-        </button>
+      <td colSpan={5} style={{ background: 'var(--bg)' }}>
+        <div className="form-grid" style={{ padding: '0.5rem 0' }}>
+          <div className="form-field">
+            <label>Instituição</label>
+            <input
+              list="instituicoes-conhecidas"
+              value={form.instituicao}
+              onChange={(e) => setForm({ ...form, instituicao: e.target.value })}
+            />
+          </div>
+          <div className="form-field">
+            <label>Apelido</label>
+            <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+          </div>
+          <div className="form-field">
+            <label>Tipo</label>
+            <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoConta })}>
+              {Object.entries(NOMES_TIPO).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-field">
+            <label>Saldo</label>
+            <input value={form.saldo} onChange={(e) => setForm({ ...form, saldo: e.target.value })} style={{ width: 110 }} />
+          </div>
+          {form.tipo === 'credito' && (
+            <div className="form-field">
+              <label>Limite disponível</label>
+              <input
+                value={form.limite}
+                onChange={(e) => setForm({ ...form, limite: e.target.value })}
+                style={{ width: 110 }}
+                placeholder="—"
+              />
+            </div>
+          )}
+          {(form.tipo === 'credito' || form.tipo === 'conta_corrente') && (
+            <>
+              <div className="form-field">
+                <label>Bandeira</label>
+                <input
+                  list="bandeiras-conhecidas"
+                  value={form.bandeira}
+                  onChange={(e) => setForm({ ...form, bandeira: e.target.value })}
+                  placeholder="Ex.: Visa, Mastercard, Elo..."
+                />
+              </div>
+              <div className="form-field">
+                <label>Últimos 4 dígitos</label>
+                <input
+                  value={form.ultimosDigitos}
+                  onChange={(e) => setForm({ ...form, ultimosDigitos: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                  placeholder="0000"
+                  maxLength={4}
+                  style={{ width: 80 }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            Salvar
+          </button>
+          <button className="btn btn-secondary" onClick={() => setEditando(false)}>
+            Cancelar
+          </button>
+        </div>
       </td>
     </tr>
   );
 }
-
-const BANDEIRAS = ['Visa', 'Mastercard', 'Elo', 'Amex'];
 
 function novaContaInicial() {
   return { nome: '', instituicao: '', tipo: 'conta_corrente' as TipoConta, saldo: '', limite: '', bandeira: '', ultimosDigitos: '' };
